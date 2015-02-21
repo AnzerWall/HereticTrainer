@@ -3,7 +3,10 @@
 #include<sstream>
 #include"MainGame.h"
 #include "ui/CocosGUI.h"
-#include"DataManager.h"
+#include "SettingScene.h"
+#include"RandomSong.h"
+#include <locale>
+
 USING_NS_CC;
 
 Scene* SelectSong::createScene()
@@ -20,21 +23,7 @@ Scene* SelectSong::createScene()
 	// return the scene
 	return scene;
 }
-std::string getFileName(std::string path)//得到去除后缀后的文件名
-{
-	std::string ret = "";
-	std::string::size_type pos = std::string::npos;
-	if ((pos = path.find(".json")) == (path.length() - 5))
-	{
-		ret = path.substr(0, path.length() - 5) ;
-	}
-	else if ((pos = path.find(".slist")) == (path.length() - 6))
-	{
-		ret = path.substr(0, path.length() - 6) ;
-	}
-	return ret;
 
-}
 // on "init" you need to initialize your instance
 bool SelectSong::init()
 {
@@ -49,35 +38,19 @@ bool SelectSong::init()
 	Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
 
-	auto sprite = Sprite::create("bk2.png");
+	auto sprite = Sprite::create("view_bk_start.png");
 	sprite->setPosition(Vec2(540,360));
 	this->addChild(sprite, 0);
 
-	auto spPanel = Sprite::create("bk2_panel.png");
-	spPanel->setPosition(Vec2(540,360));
-	this->addChild(spPanel, 1);
-	spPanel->setOpacity(200);
-
-	auto btClose = ui::Button::create("CloseNormal.png");
-
-
-	btClose->setPosition(Vec2(1080 - btClose->getContentSize().width/2-5,
-		btClose->getContentSize().height/2+5 ));
-	btClose->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
-	{
-		if (type == ui::Widget::TouchEventType::ENDED)
-		{
-			Director::getInstance()->end();
-		}
-	});
-	this->addChild(btClose, 10);
 
 
 
-	filelist = SongManager::getFileList();
-	filelist.push_back("bokuranolive.slist");
 
-	createSprite(filelist.size() - 1);
+
+	songlist = DataManager::getSongInfoList();
+
+
+	createSprite(0);
 	auto btLeft = ui::Button::create("left.png");
 	btLeft->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
 	{
@@ -85,20 +58,21 @@ bool SelectSong::init()
 		{ 
 			this->removeSprite();
 			this->createSprite(curPos - 1); 
+			
 		}
 	});
-	btLeft->setPosition(Vec2(1080 - 850, 720 - 339));
+	btLeft->setPosition(Vec2(253, 720 - 247));
 	auto btRight= ui::Button::create("right.png");
 	btRight->addTouchEventListener(
 		[=](Ref *pSender, ui::Widget::TouchEventType type)
 		{
-		if (type == ui::Widget::TouchEventType::ENDED&&curPos <filelist.size()-1)
+		if (type == ui::Widget::TouchEventType::ENDED&&curPos <songlist.size()-1)
 		{ 
 			this->removeSprite();
 			this->createSprite(curPos + 1);
 		}
 	});
-	btRight->setPosition(Vec2(850, 720 - 339));
+	btRight->setPosition(Vec2(854, 720 - 247));
 	
 	addChild(btLeft,10);
 	addChild(btRight,10);
@@ -106,58 +80,147 @@ bool SelectSong::init()
 
 
 
-	auto btBegin = ui::Button::create("btbegin.png");
-	btBegin->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
+	auto btNormal = ui::Button::create("button_normal.png");
+	btNormal->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
 	{
 		if (type == ui::Widget::TouchEventType::ENDED)
 		{
-			if (filelist[curPos].size() > 0 && filelist[curPos][filelist[curPos].size() - 1] == 'n')
+			SongConfig config;
+			config.baddis = UserDefault::getInstance()->getDoubleForKey("baddis");
+			config.gooddis = UserDefault::getInstance()->getDoubleForKey("gooddis");
+			config.greatdis = UserDefault::getInstance()->getDoubleForKey("greatdis");
+			config.perfectdis = UserDefault::getInstance()->getDoubleForKey("perfectdis");
+			Song song = DataManager::loadDataFile(songlist[curPos].sDataPath, songlist[curPos]);
+			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_OLD);
+			//log("^%s\n", songlist[curPos].sBackgroundPath.c_str());
+			if (song.bUsable)
 			{
-				auto scene = MainGame::createScene(SongManager::loadjson(filelist[curPos].c_str()), FileUtils::getInstance()->fullPathForFilename(std::string(getFileName(filelist[curPos]) + ".mp3")), 1);
-				Director::getInstance()->replaceScene(scene);
-			}
-			else
-			{
-				auto scene = MainGame::createScene(SongManager::load(filelist[curPos].c_str()), FileUtils::getInstance()->fullPathForFilename(std::string(getFileName(filelist[curPos]) + ".mp3")), 1);
-				Director::getInstance()->replaceScene(scene);
+				auto scene = MainGame::createScene(songlist[curPos],song,config);
+				Director::getInstance()->pushScene(scene);
 			}
 			
 		}
 	});
-	btBegin->setPosition(Vec2(540,720- 677));
-	btBegin->setAnchorPoint(Vec2(0.5,0.5));
-	addChild(btBegin,13);
-	return true;
+	btNormal->setPosition(Vec2(561, 720 - 626));
+	btNormal->setAnchorPoint(Vec2(0.5, 0.5));
+	addChild(btNormal, 13);
 
-}
-std::string getname(std::string path)//根据文件名获取显示名称
-{
-	auto pos = path.find_last_of("/");
-	if (pos != std::string::npos)
+	auto btFast = ui::Button::create("button_fast.png");
+	btFast->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
 	{
-		return path.substr(pos + 1);
-	}
-	else if ((pos = path.find_last_of("\\")) != std::string::npos)
+		if (type == ui::Widget::TouchEventType::ENDED)
+		{
+			SongConfig config;
+			config.baddis = UserDefault::getInstance()->getDoubleForKey("baddis");
+			config.gooddis = UserDefault::getInstance()->getDoubleForKey("gooddis");
+			config.greatdis = UserDefault::getInstance()->getDoubleForKey("greatdis");
+			config.perfectdis = UserDefault::getInstance()->getDoubleForKey("perfectdis");
+			config.rate = 0.7;
+			config.bPlayMusic = false;
+			Song song = DataManager::loadDataFile(songlist[curPos].sDataPath, songlist[curPos]);
+			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_OLD);
+			if (song.bUsable)
+			{
+				auto scene = MainGame::createScene(songlist[curPos], song, config);
+				Director::getInstance()->pushScene(scene);
+			}
+
+		}
+	});
+	btFast->setPosition(Vec2(909, 720 -626));
+	btFast->setAnchorPoint(Vec2(0.5, 0.5));
+	addChild(btFast, 13);
+
+	auto btSlow = ui::Button::create("botton_slow.png");
+	btSlow->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
 	{
-		return path.substr(pos + 1);
-	}
-	return path;
+		if (type == ui::Widget::TouchEventType::ENDED)
+		{
+			SongConfig config;
+			config.baddis = UserDefault::getInstance()->getDoubleForKey("baddis");
+			config.gooddis = UserDefault::getInstance()->getDoubleForKey("gooddis");
+			config.greatdis = UserDefault::getInstance()->getDoubleForKey("greatdis");
+			config.perfectdis = UserDefault::getInstance()->getDoubleForKey("perfectdis");
+			//log("%lf",config.perfectdis);
+			config.rate =1.5;
+			config.bPlayMusic = false;
+			Song song = DataManager::loadDataFile(songlist[curPos].sDataPath, songlist[curPos]);
+			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_OLD);
+			if (song.bUsable)
+			{
+				auto scene = MainGame::createScene(songlist[curPos], song, config);
+				Director::getInstance()->pushScene(scene);
+			}
+
+		}
+	});
+	btSlow->setPosition(Vec2(210, 720 - 626));
+	btSlow->setAnchorPoint(Vec2(0.5, 0.5));
+	addChild(btSlow, 13);
+
+	auto btReturn = ui::Button::create("button_return.png");
+	btReturn->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
+	{
+		if (type == ui::Widget::TouchEventType::ENDED)
+		{
+			Director::getInstance()->end();
+
+
+		}
+	});
+	btReturn->setPosition(Vec2(51, 720 - 42));
+	btReturn->setAnchorPoint(Vec2(0.5, 0.5));
+	addChild(btReturn, 13);
+
+
+
+
+
+	auto btSetting = ui::Button::create("button_setting.png");
+	btSetting->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
+	{
+		if (type == ui::Widget::TouchEventType::ENDED)
+		{
+			auto scene = SettingScene::scene();
+			Director::getInstance()->pushScene(scene);
+		}
+	});
+	btSetting->setPosition(Vec2(1047, 720 - 34));
+	btSetting->setAnchorPoint(Vec2(0.5, 0.5));
+	addChild(btSetting, 13);
+
+
+	cbRandom = ui::CheckBox::create(
+		"selecter_random_nor.png", 
+		"selecter_random_nor.png",
+		"selecter_random_press.png",
+		"selecter_random_nor.png", 
+		"selecter_random_press.png");
+	cbRandom->setPosition(Vec2(880, 720 - 520));
+	cbRandom->setAnchorPoint(Vec2(0.5, 0.5));
+	addChild(cbRandom, 13);
+	
+	auto lbRandom = Label::create("闅忔満", "Arial", 24);
+	lbRandom->setPosition(Vec2(947, 720 - 520));
+	addChild(lbRandom, 13);
+
+	return true;
 }
 void SelectSong::createSprite(int pos)
 {
 	curPos = pos;
 	
-	std::string pathSprite = getFileName(filelist[pos]) + ".png";
+	std::string sSpritePath = songlist[pos].sTitlePath;
 	
 
-	if (!FileUtils::getInstance()->isFileExist(pathSprite))pathSprite = "bokuranolive.png";
-	lbName = Label::create(getname(filelist[pos]), "Arial", 42);
-	lbName->setPosition(Vec2(540, 720 - 541));
+
+	lbName = Label::create(songlist[pos].sDisplayName, "Arial", 42);
+	lbName->setPosition(Vec2(553, 720 - 480));
 	lbName->setOpacity(0);
 	lbName->runAction(FadeIn::create(0.5));
-	spTitle = Sprite::create(pathSprite);;
+	spTitle = Sprite::create(sSpritePath);;
 	spTitle->setOpacity(0);
-	spTitle->setPosition(Vec2(540, 720 - 321));
+	spTitle->setPosition(Vec2(553, 720 - 247));
 	spTitle->runAction(FadeIn::create(0.5));
 	spTitle->setContentSize(Size(300, 300));
 	addChild(lbName,5);

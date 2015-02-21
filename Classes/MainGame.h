@@ -7,23 +7,42 @@
 #include"DataManager.h"
 #include<unordered_map>
 using cocos2d::Vec2;
-enum class Score{ PREJECT = 1, GREAT,GOOD,BAD,MISS };
+enum class Score{ PREJECT = 1, GREAT,GOOD,BAD,MISS,NONE };
 
 
-struct  GameObject 
+
+struct NodeInfo
 {
-	cocos2d::Sprite* start;
-	cocos2d::Sprite* goal;
-	CustomDrawNode* node;
-	int type;
+	cocos2d::Sprite* head = NULL;
+	cocos2d::Sprite* tail=NULL;
+	CustomDrawNode* noodle = NULL;
+	int type=0;
+	int index=0;
+	Score result = Score::NONE;
+	Score result_tail = Score::NONE;
 };
 class MainGame : public cocos2d::Layer
 {
 public:
 	// there's no 'id' in cpp, so we recommend returning the class instance pointer
-	static cocos2d::Scene* createScene(const Song &song, std::string songpath, double speedrate);
-	virtual bool init();
-	CREATE_FUNC(MainGame);
+	static cocos2d::Scene* createScene(const SongInfo &songinfo,const Song &song, const SongConfig &songfig);
+	virtual bool init(const SongInfo& songinfo, const Song &song, const SongConfig &songfig);
+
+	static MainGame* create(const SongInfo &songinfo, const Song &song, const SongConfig &songfig)
+	{  
+		MainGame *pRet = new MainGame(); 
+		if (pRet && pRet->init(songinfo,song,songfig))
+		{ 
+			pRet->autorelease(); 
+			return pRet; 
+		} 
+		else 
+		{ 
+			delete pRet; 
+			pRet = NULL; 
+			return NULL; 
+		} 
+	}
 	//保存一些对象的指针方便操作
 	cocos2d::EventListenerTouchAllAtOnce* listener;
 	cocos2d::Layer *touchLayer;
@@ -48,27 +67,15 @@ public:
 	int cntBad = 0;
 	int cntMiss = 0;
 
-	std::string songpath;//背景音乐路径
 
-	bool songbegin = false;//是否已经开始播放音乐
-	bool endGame = false;//是否结束游戏
+	
 	Song song;//当前的歌曲数据
-	double rate=1;//速率，未使用
-
-	//判定基准
-	double missdis=160;
-	double perfectdis=16;//15
-	double greatdis=42;//35
-	double gooddis=85;//65
-	double baddis=160;
-	double touchdis =140;
-	double touchwid = 80;//触摸判定矩形的宽
-	double touchhei = 145;//half
+	SongInfo songinfo;
+	SongConfig songconfig;
 
 
-
-	std::queue<GameObject> q[9];//保存每一道最近的圆环
-
+	std::vector<NodeInfo> nodeQueue[9];
+	int queueHead[9];
 	std::unordered_map<cocos2d::Touch*, int > table;//保存某次触摸是属于哪一个道的圆环的
 
 	void born(const Rhythm &rh);//c产生圆环
@@ -89,11 +96,7 @@ public:
 	 void  ResultScene();
 	 //测试是否触摸了某一道
 	 bool checkTouch(int pos, const Vec2 &touchLocation);
-	//计算几何，求叉乘，返回值>0表示线段BO在AO的左侧（逆时针方向），<0表示在右侧，0同侧（可能同向也可能反向），未使用
-	inline float cross(Vec2 vO, Vec2 vA, Vec2 vB) 
-	{
-		return (vA.x - vO.x)*(vB.y - vO.y) - (vA.y - vO.y)*(vB.x - vO.x);
-	}
+
 };
 
 #endif 

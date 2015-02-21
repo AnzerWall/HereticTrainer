@@ -6,8 +6,8 @@
 class CustomDrawNode : public cocos2d::DrawNode//画长条梯形
 {
 public:
-	cocos2d::Sprite *goal;//请勿吐槽命名
-	cocos2d::Sprite *start;
+	cocos2d::Sprite *tail;//请勿吐槽命名
+	cocos2d::Sprite *head;
 	bool pattern;
 
 	virtual bool init();
