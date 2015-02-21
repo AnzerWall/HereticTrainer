@@ -7,7 +7,10 @@
 class SelectSong : public cocos2d::Layer
 {
 public:
-
+	SelectSong()
+	{
+		curPos = 0;
+	}
 	static cocos2d::Scene* createScene();
 	virtual bool init();
 	void createSprite(int);
@@ -15,7 +18,7 @@ public:
 	cocos2d::Sprite* spTitle;
 	cocos2d::Label* lbName;
 	cocos2d::ui::CheckBox *cbRandom;
-	int curPos = 0;
+	int curPos;
 	std::vector<SongInfo> songlist;
 	CREATE_FUNC(SelectSong);
 };

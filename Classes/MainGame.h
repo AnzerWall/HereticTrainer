@@ -13,17 +13,74 @@ enum class Score{ PREJECT = 1, GREAT,GOOD,BAD,MISS,NONE };
 
 struct NodeInfo
 {
-	cocos2d::Sprite* head = NULL;
-	cocos2d::Sprite* tail=NULL;
-	CustomDrawNode* noodle = NULL;
-	int type=0;
-	int index=0;
-	Score result = Score::NONE;
-	Score result_tail = Score::NONE;
+	cocos2d::Sprite* head;
+	cocos2d::Sprite* tail;
+	CustomDrawNode* noodle;
+	int type;
+	int index;
+	Score result;
+	Score result_tail;
+	NodeInfo()
+	{	
+		head = NULL;
+		tail=NULL;
+		noodle = NULL;
+		type=0;
+		index=0;
+		result = Score::NONE;
+		result_tail = Score::NONE;
+	}
+	
 };
 class MainGame : public cocos2d::Layer
 {
 public:
+	//保存一些对象的指针方便操作
+	cocos2d::EventListenerTouchAllAtOnce* listener;
+	cocos2d::Layer *touchLayer;
+	cocos2d::Sprite *spPerfect;
+	cocos2d::Sprite *spGreat;
+	cocos2d::Sprite *spGood;
+	cocos2d::Sprite *spBad;
+	cocos2d::Sprite *spMiss;
+	cocos2d::Label* lbCombo;
+	cocos2d::Label*  lbComboCnt;
+	//int idAudio;//背景音乐的id
+	cocos2d::ui::Button* btStop;
+
+	int curRhythm;
+	double curTime;
+	//记录
+	int maxCombo;
+	int curCombo;
+	int cntPerfect;
+	int cntGreat;
+	int cntGood;
+	int cntBad;
+	int cntMiss;
+
+
+	
+	Song song;//当前的歌曲数据
+	SongInfo songinfo;
+	SongConfig songconfig;
+
+
+	std::vector<NodeInfo> nodeQueue[9];
+	int queueHead[9];
+	std::unordered_map<cocos2d::Touch*, int > table;//保存某次触摸是属于哪一个道的圆环的
+	MainGame()
+	{
+		curRhythm = 0;
+		curTime = 0;
+		maxCombo = 0;
+		curCombo = 0;
+		cntPerfect = 0;
+		cntGreat = 0;
+		cntGood = 0;
+		cntBad = 0;
+		cntMiss = 0;
+	}
 	// there's no 'id' in cpp, so we recommend returning the class instance pointer
 	static cocos2d::Scene* createScene(const SongInfo &songinfo,const Song &song, const SongConfig &songfig);
 	virtual bool init(const SongInfo& songinfo, const Song &song, const SongConfig &songfig);
@@ -43,40 +100,7 @@ public:
 			return NULL; 
 		} 
 	}
-	//保存一些对象的指针方便操作
-	cocos2d::EventListenerTouchAllAtOnce* listener;
-	cocos2d::Layer *touchLayer;
-	cocos2d::Sprite *spPerfect;
-	cocos2d::Sprite *spGreat;
-	cocos2d::Sprite *spGood;
-	cocos2d::Sprite *spBad;
-	cocos2d::Sprite *spMiss;
-	cocos2d::Label* lbCombo;
-	cocos2d::Label*  lbComboCnt;
-	//int idAudio;//背景音乐的id
-	cocos2d::ui::Button* btStop;
-
-	int curRhythm = 0;
-	double curTime = 0;
-	//记录
-	int maxCombo = 0;
-	int curCombo = 0;
-	int cntPerfect = 0;
-	int cntGreat = 0;
-	int cntGood = 0;
-	int cntBad = 0;
-	int cntMiss = 0;
-
-
 	
-	Song song;//当前的歌曲数据
-	SongInfo songinfo;
-	SongConfig songconfig;
-
-
-	std::vector<NodeInfo> nodeQueue[9];
-	int queueHead[9];
-	std::unordered_map<cocos2d::Touch*, int > table;//保存某次触摸是属于哪一个道的圆环的
 
 	void born(const Rhythm &rh);//c产生圆环
 	//触摸事件
