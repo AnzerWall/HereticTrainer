@@ -91,7 +91,7 @@ bool SelectSong::init()
 			config.greatdis = UserDefault::getInstance()->getDoubleForKey("greatdis");
 			config.perfectdis = UserDefault::getInstance()->getDoubleForKey("perfectdis");
 			Song song = DataManager::loadDataFile(songlist[curPos].sDataPath, songlist[curPos]);
-			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_OLD);
+			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_NEW);
 			//log("^%s\n", songlist[curPos].sBackgroundPath.c_str());
 			if (song.bUsable)
 			{
@@ -118,7 +118,7 @@ bool SelectSong::init()
 			config.rate = 0.7;
 			config.bPlayMusic = false;
 			Song song = DataManager::loadDataFile(songlist[curPos].sDataPath, songlist[curPos]);
-			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_OLD);
+			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_NEW);
 			if (song.bUsable)
 			{
 				auto scene = MainGame::createScene(songlist[curPos], song, config);
@@ -145,7 +145,7 @@ bool SelectSong::init()
 			config.rate =1.5;
 			config.bPlayMusic = false;
 			Song song = DataManager::loadDataFile(songlist[curPos].sDataPath, songlist[curPos]);
-			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_OLD);
+			if (cbRandom->getSelectedState())song = Randomize(song, RANDOM_NEW);
 			if (song.bUsable)
 			{
 				auto scene = MainGame::createScene(songlist[curPos], song, config);

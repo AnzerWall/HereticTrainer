@@ -2,6 +2,7 @@
 #include"cocos2d.h"
 #include<time.h>
 #include<algorithm>
+#include<stdio.h>
 int RanPos(int Fixed) //长条混杂单点的时候的单点随机
 {
 	int ret;
@@ -12,14 +13,6 @@ int RanPos(int Fixed) //长条混杂单点的时候的单点随机
 	else if(Fixed > 4)
 	{
 		ret = mRandomInt(0,3);
-	}
-	else
-	{
-		int side = mRandomInt(0,1);
-		if(side)
-			ret = mRandomInt(0,2);
-		else
-			ret = mRandomInt(6,8);
 	}
 	return ret;
 }
@@ -64,85 +57,60 @@ Song Randomize(const Song &Input, int Randomtype)
 
 		for (int i = 0; i < ret.lstRhythm.size();i++)
 		{
-			if ((ret.lstRhythm[i].type&RHYTHMTYPE_LONG)) //长
+			if ((ret.lstRhythm[i].type&RHYTHMTYPE_LONG && !(ret.lstRhythm[i].type & RHYTHMTYPE_SAMETIME) )) //纯粹长
 			{
-				if(ret.lstRhythm[i].beginTime > LastLong.endTime + 0.001)
-				{
-					if(ret.lstRhythm[i].type & RHYTHMTYPE_SAMETIME)
-					{
-						//长条带有同时押标记
-						if(ret.lstRhythm[i].beginTime != LastPar.beginTime)	// 
-						{
-							if(ret.lstRhythm[i].beginTime > LastLong.endTime + 0.001)
-								ret.lstRhythm[i].pos = mRandomInt(0, 8);
-						}	 
-						else
-						{
-							ret.lstRhythm[i].pos = RanPos(LastPar.pos);
-						}
-						LastPar = ret.lstRhythm[i];
-					}
-					else
-					{
-						//当前长条为独立的长条(无同时押标记)，则在0-3以及5-8位随机
-						int side = mRandomInt(0,1);
-						if(side)
-						{
-							ret.lstRhythm[i].pos = mRandomInt(0,3);
-						}
-						else
-						{
-						ret.lstRhythm[i].pos = mRandomInt(5,8);
-						}
-					}
-				}
-				else
-				{
-					//否则将长条随到当前长条对面
-					ret.lstRhythm[i].pos = RanPos(LastLong.pos);;
-				}
-				//记录上个条位置
-				if(LastLong.endTime < ret.lstRhythm[i].endTime)
-				{
-					LastLong = ret.lstRhythm[i];
-				}
+				LongNoteRan(ret.lstRhythm[i], LastLong);
 			}
-			else if (ret.lstRhythm[i].type&RHYTHMTYPE_SAMETIME && !(ret.lstRhythm[i].type & RHYTHMTYPE_LONG)) //纯同时押
+			else if (ret.lstRhythm[i].type&RHYTHMTYPE_SAMETIME) //同时押
 			{
-				if(ret.lstRhythm[i].beginTime == LastPar.beginTime)
-				{
-					ret.lstRhythm[i].pos = RanPos(LastPar.pos);
-				}
-				else
-				{
-					ret.lstRhythm[i].pos = mRandomInt(0, 8);
-				};
-				LastPar = ret.lstRhythm[i];
+				ParrNoteRan(ret.lstRhythm[i], LastLong, LastPar);
 			}
 			else if (!((ret.lstRhythm[i].type&RHYTHMTYPE_LONG) || (ret.lstRhythm[i].type&RHYTHMTYPE_SAMETIME)))
 			{
-				//纯单押
-				if (ret.lstRhythm[i].beginTime > LastLong.endTime + 0.001)
-				{
-					//单押左右交替四个区域随机
-					if(note_hit_count >= note_limit_single_area)
-					{
-						p++;
-						//下一次落下的区域不在上一次的地方
-						if(p > 3)
-						{
-							p = 0;
-							seq(a);
-						}
-					}
-					switch(a[p])
-					{
-						case 1:ret.lstRhythm[i].pos = mRandomInt(0,1);break;
-						case 2:ret.lstRhythm[i].pos = mRandomInt(2,3);break;
-						case 3:ret.lstRhythm[i].pos = mRandomInt(4,6);break;
-						case 4:ret.lstRhythm[i].pos = mRandomInt(7,8);break;
-					
-					}
+				//单押
+				SingleNoteRan(ret.lstRhythm[i],LastLong, note_hit_count, note_limit_single_area, a, p);	
+			}	
+
+
+		}
+	}
+	return ret;
+}
+void ParrNoteRan(Rhythm &current, Rhythm &LastLong, Rhythm &LastPar)
+{
+	current.pos = RanPos(LastPar.pos);
+	if (current.type & RHYTHMTYPE_LONG)
+	{
+		if(LastLong.endTime < current.beginTime)
+		{				
+
+			LastLong = current;
+		}
+	}
+	LastPar = current;
+}
+void SingleNoteRan(Rhythm &current,Rhythm &LastLong, int &note_hit_count, int &note_limit_single_area, int (&a)[4], int &p)
+{
+	//纯单押
+	if (current.beginTime > LastLong.endTime + 0.001)
+	{
+			//单押左右交替四个区域随机
+			if(note_hit_count >= note_limit_single_area)
+			{
+				p++;
+			//下一次落下的区域不在上一次的地方
+			if(p > 3)
+			{
+				p = 0;
+				seq(a);					}
+			}
+			switch(a[p])
+			{
+				case 1:current.pos = mRandomInt(0,1);break;
+				case 2:current.pos = mRandomInt(2,3);break;
+				case 3:current.pos = mRandomInt(4,6);break;
+				case 4:current.pos = mRandomInt(7,8);break;	
+			}
 
 			//		if(area)
 			//		{
@@ -152,21 +120,53 @@ Song Randomize(const Song &Input, int Randomtype)
 			//		{
 			//			ret.lstRhythm[i].pos = mRandomInt(5,8);
 			//		}
-					note_hit_count++;
-				}
-				else
-				{
-					//长单随对面
-					ret.lstRhythm[i].pos = RanPos(LastLong.pos);
-				}	
-			}		
-		}
-	}
-	return ret;
+			note_hit_count++;
+			}
+			else
+			{					//长单随对面
+				current.pos = RanPos(LastLong.pos);
+			}
 }
 int mRandomInt(int min,int max)
 {
 	return rand() % (max - min + 1) + min;
+}
+void LongNoteRan(Rhythm &current, Rhythm &LastLong)
+{
+	if(current.beginTime > LastLong.endTime + 0.001)
+	{
+		current.pos = SingleNoteRan_Exclude4();;
+	}
+	else
+	{
+		//否则将长条随到当前长条对面
+		current.pos = RanPos(LastLong.pos);;
+		
+			//debug msgs
+				
+				CCLOG("CurrentLong Pos 5, start from %f, end to %f \n", current.beginTime, current.endTime);
+				CCLOG("Lastlong Pos %d, from %f, end to %f\n",LastLong.pos, LastLong.beginTime, LastLong.endTime);
+	//			CCLOG("LastPar at %d, begin %f", LastPar.pos, LastPar.beginTime);
+			//////
+	}
+	//记录上个条位置
+	if(LastLong.endTime < current.endTime)
+	{
+		LastLong = current;
+	}
+}
+int SingleNoteRan_Exclude4()
+{
+	int ret;
+	int side = mRandomInt(0,1);
+	if(side)
+	{
+		ret = mRandomInt(0,3);
+	}
+	else
+	{
+		ret = mRandomInt(5,8);
+	}
 }
 void seq(int* x)
 {
