@@ -94,7 +94,7 @@ SongInfo loadInfoFile(std::string path)
 		rapidjson::Value& valMusicPath = doc["MusicPath"];
 		ret.sMusicPath = valMusicPath.GetString();
 	}
-	else ret.sMusicPath = sPathMain + ".mp3";
+	else ret.sMusicPath = sPathMain;
 
 	if (doc.HasMember("TitlePath"))
 	{
@@ -425,7 +425,7 @@ std::vector<SongInfo> DataManager::getSongInfoList()
 				siTmp.bUsable = true;
 				siTmp.sDisplayName = getPathMain(iter);
 				siTmp.sDataPath = siTmp.sDisplayName + ".js";
-				siTmp.sMusicPath = siTmp.sDisplayName + ".mp3";
+				siTmp.sMusicPath = siTmp.sDisplayName;	//扩展名由MusicPlay.java确认
 				ret.push_back(siTmp);
 				
 			}

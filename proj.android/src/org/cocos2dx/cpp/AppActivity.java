@@ -31,14 +31,18 @@ package org.cocos2dx.cpp;
 import org.cocos2dx.lib.Cocos2dxActivity;
 
 
+
 import java.lang.String;
+
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.media.MediaPlayer;
 import android.content.Context;
 import android.os.Bundle;
 import android.app.Activity;
+
 import java.io.IOException;
+
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.os.Environment;
@@ -48,9 +52,9 @@ public class AppActivity extends Cocos2dxActivity
 
     private static int idPerfect;
     private static int idGreat;
-    private  static int idGood;
-    private  static int  idMiss;
-    private   static SoundPool sp;
+    private static int idGood;
+    private static int  idMiss;
+    private static SoundPool sp;
     private static void initAudioEngine()
     {
         AssetManager assetManager = getContext().getAssets();

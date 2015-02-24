@@ -22,7 +22,8 @@ LOCAL_SRC_FILES := hellocpp/main.cpp \
 			../../Classes/RandomSong.cpp \
 			../../Classes/SettingScene.cpp \
 			../../Classes/LLParser.cpp \
-			../../Classes/MainGame.cpp 
+			../../Classes/MainGame.cpp \
+			../../Classes/MusicPlayer.cpp
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../Classes
 
 LOCAL_STATIC_LIBRARIES := cocos2dx_static

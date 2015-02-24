@@ -6,6 +6,7 @@
 #include"CustomDrawNode.h"
 #include"DataManager.h"
 #include<unordered_map>
+#include "MusicPlayer.h"
 using cocos2d::Vec2;
 enum class Score{ PREJECT = 1, GREAT,GOOD,BAD,MISS,NONE };
 

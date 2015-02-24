@@ -62,6 +62,18 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 		return false;
 	}
 	log("Anzer init begin");
+	//播放音乐
+	//log("Anzer init end");
+	if (songconfig.bPlayMusic)
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		if(Prepare(songinfo.sMusicPath.c_str()))
+		{
+			PlayMusic();
+		}
+#else
+		experimental::AudioEngine::play2d(songinfo.sMusicPath);
+#endif
+	//log("Anzer init end2");
 	memset(queueHead, 0, sizeof(queueHead));
 	this->song = song;
 	this->songinfo = songinfo;
@@ -204,11 +216,6 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 
 	//开启循环制造旋律
 	this->scheduleUpdate();
-	//播放音乐
-	//log("Anzer init end");
-	if (songconfig.bPlayMusic)
-	experimental::AudioEngine::play2d(songinfo.sMusicPath);
-	//log("Anzer init end2");
 	return true;
 }
 
@@ -217,12 +224,11 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 void  MainGame::StopSence()
 {
 //	TextureCache::getInstance()->removeUnusedTextures();
-
-	experimental::AudioEngine::pauseAll(); 
-
-
-
-
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Pause();
+#else
+		experimental::AudioEngine::pauseAll(); 
+#endif
 	RenderTexture *renderTexture = RenderTexture::create(1080, 720);
 	renderTexture->begin();
 	//renderTexture->beginWithClear(0.0f, 0.0f, 0.0f, 0.0f);
@@ -244,31 +250,37 @@ void  MainGame::StopSence()
 	spStop->setPosition(540, 360);
 	lyStop->addChild(spStop, 1);
 	auto btContinue = ui::Button::create("button2.png");
+	//按钮继续的事件函数
 	btContinue->setPosition(Vec2(376, 194));
 	btContinue->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
 	{if (type == ui::Widget::TouchEventType::ENDED)
 	{
 		Director::getInstance()->popScene();
-
-		experimental::AudioEngine::resumeAll();
-
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Resume();
+#else
+		experimental::AudioEngine::resumeAll(); 
+#endif
 	} });
+	//
 	lyStop->addChild(btContinue, 2);
+	//放弃按钮的事件函数
 	auto btReturn = ui::Button::create("button1.png");
 	btReturn->setPosition(Vec2(704, 194));
 	btReturn->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type){if (type == ui::Widget::TouchEventType::ENDED) {
 		_eventDispatcher->removeEventListener(this->listener);
 
-
-		experimental::AudioEngine::stopAll();
-
-
-
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Stop();
+#else
+		experimental::AudioEngine::stopAll(); 
+#endif
 		Director::getInstance()->popScene(); 
 		
 		Director::getInstance()->popScene();
 
 	} });
+	//
 	lyStop->addChild(btReturn, 2);
 	Director::getInstance()->pushScene(scStop);
 
@@ -400,7 +412,6 @@ void MainGame::born(const Rhythm &rh)
 	if (rh.type&RHYTHMTYPE_LONG)//长型圆环（长旋律）
 	{
 		nodeinfo.head = Sprite::create((rh.type&RHYTHMTYPE_SAMETIME) ? "r3.png" : "r2.png");
-
 		nodeinfo.head->setPosition(539, 539);
 		nodeinfo.head->setScale(0);//长圆环的头圆环
 
@@ -429,13 +440,10 @@ void MainGame::born(const Rhythm &rh)
 		float start_t1 = speed*this->songconfig.rate;//头圆环出生到到达头像处需要的时间
 		float dis = vGameArea[rh.pos].distance(vBornPoint);//该道的头像和出生点的距离
 
-
 		float start_t2 = (this-> songconfig.baddis/ dis)*start_t1;//判定为miss需要的时间
-
 
 		float end_t1 = (rh.endTime - rh.beginTime)*this->songconfig.rate;//尾圆环动作延迟时间
 		float end_t2 = speed*this->songconfig.rate;//尾圆环到达头像处需要的时间
-
 
 		//计算miss点，坐标
 		float speedx = (vGameArea[rh.pos].x - vBornPoint.x) / (speed*this->songconfig.rate);
@@ -444,8 +452,8 @@ void MainGame::born(const Rhythm &rh)
 		Vec2 vGoal =Vec2 ( vGameArea[rh.pos].x + speedx*end_t3, vGameArea[rh.pos].y + speedy*end_t3 );//miss时的位置
 		//动作
 		Sequence *sq1 = Sequence::create(
-			Spawn::create(ScaleTo::create(start_t1, 1), MoveTo::create(start_t1, vGameArea[rh.pos]), NULL), DelayTime::create(start_t2)
-			, CCCallFuncN::create([=](Ref*sender)
+		Spawn::create(ScaleTo::create(start_t1, 1), MoveTo::create(start_t1, vGameArea[rh.pos]), NULL),					DelayTime::create(start_t2)
+		, CCCallFuncN::create([=](Ref*sender)
 		{
 			nodeinfo.head->setVisible(false);
 			nodeinfo.tail->setVisible(false);
@@ -625,8 +633,11 @@ void MainGame::update(float dt)
 	{
 
 		this->unscheduleUpdate();
-		experimental::AudioEngine::stopAll();
-
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Stop();
+#else
+		experimental::AudioEngine::stopAll(); 
+#endif
 		ResultScene();
 		return;
 	}
@@ -789,13 +800,13 @@ void  MainGame::ResultScene()
 
 
 
-	auto lbScore = Label::createWithTTF(ttfConfig, "100000000");
+	auto lbScore = Label::createWithTTF(ttfConfig, "4444444");
 	lbScore->setColor(Color3B(255, 102, 153));
 	lbScore->setPosition(Vec2(655, 720 - 332));
 	lbScore->setAdditionalKerning(20);
 	lyResult->addChild(lbScore, 2);
 
-	auto lbHScore = Label::createWithTTF(ttfConfig, "233333333");
+	auto lbHScore = Label::createWithTTF(ttfConfig, "252525252");
 	lbHScore->setColor(Color3B(255, 102, 153));
 	lbHScore->setPosition(Vec2(655, 720 - 376));
 	lbHScore->setAdditionalKerning(20);

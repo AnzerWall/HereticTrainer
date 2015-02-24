@@ -2,7 +2,6 @@
 #if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
 #include"AndroidAudio.h"
 #include <jni.h>
-
 #include "platform/android/jni/JniHelper.h"
 #endif
 
