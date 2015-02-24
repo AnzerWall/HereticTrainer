@@ -3,20 +3,23 @@
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
-
+#include"DataManager.h"
 class SelectSong : public cocos2d::Layer
 {
 public:
-
+	SelectSong()
+	{
+		curPos = 0;
+	}
 	static cocos2d::Scene* createScene();
 	virtual bool init();
 	void createSprite(int);
 	void removeSprite();
 	cocos2d::Sprite* spTitle;
 	cocos2d::Label* lbName;
-
-	int curPos = 0;
-	std::vector<std::string> filelist;
+	cocos2d::ui::CheckBox *cbRandom;
+	int curPos;
+	std::vector<SongInfo> songlist;
 	CREATE_FUNC(SelectSong);
 };
 

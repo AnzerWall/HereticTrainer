@@ -3,7 +3,10 @@
 *.lo
 *.o
 *.obj
-
+*.d
+*.class
+/proj.android/bin/*
+/proj.android/libs/*
 # Precompiled Headers
 *.gch
 *.pch
@@ -26,3 +29,8 @@
 *.exe
 *.out
 *.app
+
+#cocos2d sources
+/cocos2d/*
+/proj.android/src/org/cocos2dx/lib/*
+

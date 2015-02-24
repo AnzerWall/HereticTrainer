@@ -4,12 +4,10 @@
 #include <algorithm>
 #include<sstream>
 #include<math.h>
-#define TestAudio
-#ifdef TestAudio
-#include "audio/include/AudioEngine.h"
-#else
-#include "SimpleAudioEngine.h"
-#endif
+
+
+#include"audio\include\AudioEngine.h"
+#include"AndroidAudio.h"
 
 USING_NS_CC;
 using namespace ui;
@@ -17,24 +15,21 @@ Vec2 vGameArea[] = { Vec2(89, 539), Vec2(124, 364), Vec2(220, 219), Vec2(367, 12
 , Vec2(712, 122), Vec2(858, 219), Vec2(954, 364), Vec2(989, 539) };
 
 Vec2 vBornPoint = Vec2(539, 539);
-double R = 62;
+double iRadius = 62;
 
-std::string musicpath;
 
-Scene* MainGame::createScene(const Song &song, std::string songpath, double speedrate)
+
+Scene* MainGame::createScene(const SongInfo &songinfo, const Song &song, const SongConfig &songfig)
 {
 	// 'scene' is an autorelease object
 
 	auto scene = Scene::create();
 
 	// 'layer' is an autorelease object
-	auto layer = MainGame::create();
+	auto layer = MainGame::create(songinfo, song, songfig);
 
 	// add layer as a child to scene
 	scene->addChild(layer);
-	layer->song = song;
-	layer->rate = speedrate;
-	layer->songpath = songpath;
 	// return the scene
 	return scene;
 }
@@ -58,7 +53,7 @@ void MainGame::showPressEffect(int pos)
 
 }
 // on "init" you need to initialize your instance
-bool MainGame::init()
+bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig &songfig)
 {
 	//////////////////////////////
 	// 1. super init first
@@ -66,22 +61,39 @@ bool MainGame::init()
 	{
 		return false;
 	}
-//	idAudio = experimental::AudioEngine::INVAILD_AUDIO_ID;
-	
+	log("Anzer init begin");
+	//播放音乐
+	//log("Anzer init end");
+	if (songconfig.bPlayMusic)
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		if(Prepare(songinfo.sMusicPath.c_str()))
+		{
+			PlayMusic();
+		}
+#else
+		experimental::AudioEngine::play2d(songinfo.sMusicPath);
+#endif
+	//log("Anzer init end2");
+	memset(queueHead, 0, sizeof(queueHead));
+	this->song = song;
+	this->songinfo = songinfo;
+	this->songconfig = songfig;
+
 	//创建背景
-	auto spBackGround = Sprite::create("bk_bot.png");
+//	log("&&&&%s", songinfo.sBackgroundPath.c_str());
+	auto spBackGround = Sprite::create(songinfo.sBackgroundPath,Rect(0,0,1080,720));
 	//spBackGround->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y));
 	spBackGround->setPosition(540,360);
 	addChild(spBackGround, 0);
-	auto spBackGround_top = Sprite::create("bk_top.png");
-	spBackGround_top->setAnchorPoint(Vec2(0,1));
-	spBackGround_top->setPosition(0, 720);
-	addChild(spBackGround_top, 0);
+	//auto spBackGround_top = Sprite::create("bk_top.png");
+	//spBackGround_top->setAnchorPoint(Vec2(0,1));
+	//spBackGround_top->setPosition(0, 720);
+	//addChild(spBackGround_top, 0);
 
 	//创建头像
 	for (int i = 0; i < 9; i++)
 	{
-		auto sptmp = Sprite::create("umi.png");
+		auto sptmp = Sprite::create(songinfo.sPressButtonPath[i]);
 		sptmp->setPosition(vGameArea[i]);
 		addChild(sptmp, 5);
 	}
@@ -204,9 +216,6 @@ bool MainGame::init()
 
 	//开启循环制造旋律
 	this->scheduleUpdate();
-	//播放音乐
-	
-
 	return true;
 }
 
@@ -215,15 +224,11 @@ bool MainGame::init()
 void  MainGame::StopSence()
 {
 //	TextureCache::getInstance()->removeUnusedTextures();
-#ifdef TestAudio
-	experimental::AudioEngine::pauseAll();
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Pause();
 #else
-	CocosDenshion::SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
-	CocosDenshion::SimpleAudioEngine::getInstance()->stopAllEffects();
+		experimental::AudioEngine::pauseAll(); 
 #endif
-
-
-
 	RenderTexture *renderTexture = RenderTexture::create(1080, 720);
 	renderTexture->begin();
 	//renderTexture->beginWithClear(0.0f, 0.0f, 0.0f, 0.0f);
@@ -245,35 +250,37 @@ void  MainGame::StopSence()
 	spStop->setPosition(540, 360);
 	lyStop->addChild(spStop, 1);
 	auto btContinue = ui::Button::create("button2.png");
+	//按钮继续的事件函数
 	btContinue->setPosition(Vec2(376, 194));
 	btContinue->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
 	{if (type == ui::Widget::TouchEventType::ENDED)
 	{
 		Director::getInstance()->popScene();
-#ifdef TestAudio
-		experimental::AudioEngine::resumeAll();
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Resume();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
+		experimental::AudioEngine::resumeAll(); 
 #endif
 	} });
+	//
 	lyStop->addChild(btContinue, 2);
+	//放弃按钮的事件函数
 	auto btReturn = ui::Button::create("button1.png");
 	btReturn->setPosition(Vec2(704, 194));
 	btReturn->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type){if (type == ui::Widget::TouchEventType::ENDED) {
 		_eventDispatcher->removeEventListener(this->listener);
 
-#ifdef TestAudio
-		experimental::AudioEngine::stopAll();
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Stop();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->stopBackgroundMusic();
-		CocosDenshion::SimpleAudioEngine::getInstance()->stopAllEffects();
+		experimental::AudioEngine::stopAll(); 
 #endif
-		this->endGame = true;
 		Director::getInstance()->popScene(); 
 		
-		//Director::getInstance()->popScene();
+		Director::getInstance()->popScene();
 
 	} });
+	//
 	lyStop->addChild(btReturn, 2);
 	Director::getInstance()->pushScene(scStop);
 
@@ -281,8 +288,8 @@ void  MainGame::StopSence()
 
 void MainGame::showScoreEffect(Score score)
 {
-
-	//log("ttt");
+//	static  int cnt = 0;
+//	log("Anzer showScore-%d begin", cnt);
 	spPerfect->stopAllActions();
 	spGreat->stopAllActions();
 	spGood->stopAllActions();
@@ -311,10 +318,10 @@ void MainGame::showScoreEffect(Score score)
 		buf << curCombo;
 		lbComboCnt->setString(buf.str());
 		cntPerfect++;
-#ifdef TestAudio
-		experimental::AudioEngine::play2d("perfect.mp3");
+#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+		playEffectPerfect();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("perfect.mp3");
+		experimental::AudioEngine::play2d("perfect.ogg");
 #endif
 	
 		break;
@@ -334,10 +341,10 @@ void MainGame::showScoreEffect(Score score)
 		buf << curCombo;
 		lbComboCnt->setString(buf.str());
 		cntGreat++;
-#ifdef TestAudio
-		experimental::AudioEngine::play2d("great.mp3");
+#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+		playEffectGreat();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("great.mp3");
+		experimental::AudioEngine::play2d("great.ogg");
 #endif
 
 		break;
@@ -351,10 +358,10 @@ void MainGame::showScoreEffect(Score score)
 		lbCombo->setVisible(false);
 		curCombo = 0;
 		cntGood++;
-#ifdef TestAudio
-		experimental::AudioEngine::play2d("good.mp3");
+#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+		playEffectGood();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("good.mp3");
+		experimental::AudioEngine::play2d("good.ogg");
 #endif
 
 		break;
@@ -367,10 +374,10 @@ void MainGame::showScoreEffect(Score score)
 		lbCombo->setVisible(false);
 		curCombo = 0;
 		cntBad++;
-#ifdef TestAudio
-		experimental::AudioEngine::play2d("good.mp3");
+#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+		playEffectGood();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("good.mp3");
+		experimental::AudioEngine::play2d("good.ogg");
 #endif
 
 		break;
@@ -381,10 +388,10 @@ void MainGame::showScoreEffect(Score score)
 		spMiss->runAction(Sequence::create(Show::create(), ScaleTo::create(0.1, 1), FadeOut::create(0.3), NULL));
 		lbComboCnt->setVisible(false);
 		lbCombo->setVisible(false);
-#ifdef TestAudio
-		experimental::AudioEngine::play2d("good.mp3");
+#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+		playEffectMiss();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("good.mp3");
+		experimental::AudioEngine::play2d("miss.ogg");
 #endif
 
 		curCombo = 0;
@@ -393,63 +400,75 @@ void MainGame::showScoreEffect(Score score)
 	default:
 		break;
 	}
+//	log("Anzer  showScore-%d end", cnt++);
 }
 void MainGame::born(const Rhythm &rh)
 {
-	GameObject gobj;
-	gobj.type = rh.type;
+	//static int debug_cnt = 0;
+//	log("Anzer  born-%d begin", debug_cnt);
+	NodeInfo nodeinfo;
+
+	nodeinfo.type = rh.type;
 	if (rh.type&RHYTHMTYPE_LONG)//长型圆环（长旋律）
 	{
-		gobj.start = Sprite::create((rh.type&RHYTHMTYPE_SAMETIME )? "r3.png" : "r2.png");
+		nodeinfo.head = Sprite::create((rh.type&RHYTHMTYPE_SAMETIME) ? "r3.png" : "r2.png");
+		nodeinfo.head->setPosition(539, 539);
+		nodeinfo.head->setScale(0);//长圆环的头圆环
 
-		gobj.start->setPosition(539, 539);
-		gobj.start->setScale(0);//长圆环的头圆环
+		nodeinfo.tail = Sprite::create("r1.png");
+		nodeinfo.tail->setPosition(539, 539);
+		nodeinfo.tail->setScale(0);
 
-		gobj.goal = Sprite::create("r1.png");
-		gobj.goal->setPosition(539, 539);
-		gobj.goal->setScale(0);
-
-		gobj.node = CustomDrawNode::create();//画梯形
-		gobj.node->setPosition(Vec2::ZERO);
-		gobj.node->setAnchorPoint(Vec2::ZERO);
-		gobj.node->start = gobj.start;
-		gobj.node->goal = gobj.goal;
-		gobj.node->pattern = true;
-		gobj.node->tm = 0;
-		gobj.node->atm = rh.endTime-rh.beginTime;//持续时间
+		nodeinfo.noodle = CustomDrawNode::create();//画梯形
+		nodeinfo.noodle->setPosition(Vec2::ZERO);
+		nodeinfo.noodle->setAnchorPoint(Vec2::ZERO);
+		nodeinfo.noodle->head = nodeinfo.head;
+		nodeinfo.noodle->tail = nodeinfo.tail;
+		nodeinfo.noodle->pattern = true;
+		nodeinfo.noodle->tm = 0;
+		nodeinfo.noodle->atm = rh.endTime - rh.beginTime;//持续时间
 
 
-		addChild(gobj.start, 10);
-		addChild(gobj.node, 8);
-		addChild(gobj.goal, 10);
-		q[rh.pos].push(gobj);//添加到队列，便于触摸时判断最近的圆环
+		
+		addChild(nodeinfo.head, 10);
+		addChild(nodeinfo.noodle, 8);
+		addChild(nodeinfo.tail, 10);
 
-		float start_t1 = this->song.speed*this->rate;//头圆环出生到到达头像处需要的时间
+		nodeQueue[rh.pos].push_back(nodeinfo);
+		nodeinfo.index = nodeQueue[rh.pos].size() - 1;
+		double speed = this->song.dSpeed;
+		float start_t1 = speed*this->songconfig.rate;//头圆环出生到到达头像处需要的时间
 		float dis = vGameArea[rh.pos].distance(vBornPoint);//该道的头像和出生点的距离
 
+		float start_t2 = (this-> songconfig.baddis/ dis)*start_t1;//判定为miss需要的时间
 
-		float start_t2 = (missdis / dis)*start_t1;//判定为miss需要的时间
-
-
-		float end_t1 = (rh.endTime - rh.beginTime);//尾圆环动作延迟时间
-		float end_t2 = this->song.speed*this->rate;//尾圆环到达头像处需要的时间
-
+		float end_t1 = (rh.endTime - rh.beginTime)*this->songconfig.rate;//尾圆环动作延迟时间
+		float end_t2 = speed*this->songconfig.rate;//尾圆环到达头像处需要的时间
 
 		//计算miss点，坐标
-		float speedx = (vGameArea[rh.pos].x - vBornPoint.x) / (this->song.speed*this->rate);
-		float speedy = (vGameArea[rh.pos].y - vBornPoint.y) / (this->song.speed*this->rate);
-		float end_t3 = (missdis / dis)*end_t2;
-		Vec2 vGoal = { vGameArea[rh.pos].x + speedx*end_t3, vGameArea[rh.pos].y + speedy*end_t3 };//miss时的位置
+		float speedx = (vGameArea[rh.pos].x - vBornPoint.x) / (speed*this->songconfig.rate);
+		float speedy = (vGameArea[rh.pos].y - vBornPoint.y) / (speed*this->songconfig.rate);
+		float end_t3 = (this->songconfig.baddis / dis)*end_t2;
+		Vec2 vGoal =Vec2 ( vGameArea[rh.pos].x + speedx*end_t3, vGameArea[rh.pos].y + speedy*end_t3 );//miss时的位置
 		//动作
 		Sequence *sq1 = Sequence::create(
-			Spawn::create(ScaleTo::create(start_t1, 1), MoveTo::create(start_t1, vGameArea[rh.pos]), NULL), DelayTime::create(start_t2)
-			, CCCallFuncN::create([=](Ref*sender)
+		Spawn::create(ScaleTo::create(start_t1, 1), MoveTo::create(start_t1, vGameArea[rh.pos]), NULL),					DelayTime::create(start_t2)
+		, CCCallFuncN::create([=](Ref*sender)
 		{
-			this->removeChild(gobj.start);
-			this->removeChild(gobj.node);
-			this->removeChild(gobj.goal);
-			q[rh.pos].pop();
+			nodeinfo.head->setVisible(false);
+			nodeinfo.tail->setVisible(false);
+			nodeinfo.noodle->setVisible(false);
+
+
+		
+			Score result = nodeQueue[rh.pos][nodeinfo.index].result;
+
+			if (result == Score::NONE)
+				nodeQueue[rh.pos][nodeinfo.index].result = Score::MISS;
+
+			if (result == Score::NONE)
 			showScoreEffect(Score::MISS);
+			
 		})
 			, NULL);
 
@@ -457,58 +476,86 @@ void MainGame::born(const Rhythm &rh)
 			DelayTime::create(end_t1), Spawn::create(ScaleTo::create(end_t2, 1), MoveTo::create(end_t2, vGameArea[rh.pos]), NULL), MoveTo::create(end_t3, vGoal)
 			, CCCallFuncN::create([=](Ref*sender)
 		{
-			this->removeChild(gobj.start);
-			this->removeChild(gobj.node);
-			this->removeChild(gobj.goal);
-			q[rh.pos].pop();
+			nodeinfo.head->setVisible(false);
+			nodeinfo.tail->setVisible(false);
+			nodeinfo.noodle->setVisible(false);
+			
+			Score result = nodeQueue[rh.pos][nodeinfo.index].result_tail;
 
-			showScoreEffect(Score::MISS);
+			if (result == Score::NONE)
+				nodeQueue[rh.pos][nodeinfo.index].result_tail = Score::MISS;
+
+			if (result == Score::NONE)
+				showScoreEffect(Score::MISS);
 		})
+			, DelayTime::create(10), CCCallFuncN::create([=](Ref*sender)
+		{
+			this->removeChild(nodeinfo.head);
+			this->removeChild(nodeinfo.tail);
+			this->removeChild(nodeinfo.noodle);
+		})
+
 		, NULL);
 
-		gobj.start->runAction(sq1);
-		gobj.goal->runAction(sq2);
-		gobj.node->scheduleUpdate();
+		nodeinfo.head->runAction(sq1);
+		nodeinfo.tail->runAction(sq2);
+		nodeinfo.noodle->scheduleUpdate();
 	}
 	else
 	{
-		gobj.start = Sprite::create((rh.type&RHYTHMTYPE_SAMETIME) ? "r3.png" : "r2.png");
-		gobj.start->setPosition(539, 539);
-		gobj.start->setScale(0);
-		this->addChild(gobj.start, 10);
+		nodeinfo.head = Sprite::create((rh.type&RHYTHMTYPE_SAMETIME) ? "r3.png" : "r2.png");
+		nodeinfo.head->setPosition(539, 539);
+		nodeinfo.head->setScale(0);
+		this->addChild(nodeinfo.head, 10);
 
 
 
 		//这里的song.speed并不表示速度，详细见定义
-		float t1 = this->song.speed*this->rate;
+		double speed =this->song.dSpeed;
+
+		float t1 = speed*this->songconfig.rate;
 		float dis = vGameArea[rh.pos].distance(vBornPoint);
-		float speedx = (vGameArea[rh.pos].x - vBornPoint.x)/(this->song.speed*this->rate);
-		float speedy = (vGameArea[rh.pos].y - vBornPoint.y) / (this->song.speed*this->rate);
-		float t2 = (missdis/dis)*t1;
-		Vec2 vGoal = { vGameArea[rh.pos].x + speedx*t2, vGameArea[rh.pos].y+speedy*t2};//miss时的位置
-		q[rh.pos].push(gobj);
+		float speedx = (vGameArea[rh.pos].x - vBornPoint.x) / (speed*this->songconfig.rate);
+		float speedy = (vGameArea[rh.pos].y - vBornPoint.y) / (speed*this->songconfig.rate);
+		float t2 = (songconfig.baddis/ dis)*t1;
+		Vec2 vGoal =Vec2(vGameArea[rh.pos].x + speedx*t2, vGameArea[rh.pos].y+speedy*t2);//miss时的位置
+		nodeQueue[rh.pos].push_back(nodeinfo);
+		nodeinfo.index = nodeQueue[rh.pos].size() - 1;
+
 		auto ac = Sequence::create(
 			Spawn::create(ScaleTo::create(t1, 1), MoveTo::create(t1, vGameArea[rh.pos]), NULL),
 			MoveTo::create(t2, vGoal),
 			CCCallFuncN::create([=](Ref *sender)
 		{
+			nodeinfo.head->setVisible(false);
+
+			Score result = nodeQueue[rh.pos][nodeinfo.index].result;
+
+			if (result == Score::NONE)
+				nodeQueue[rh.pos][nodeinfo.index].result = Score::MISS;
+			if (result == Score::NONE)
+				showScoreEffect(Score::MISS);
+
+
+		}), DelayTime::create(10), CCCallFuncN::create([=](Ref*sender)
+		{
+			this->removeChild(nodeinfo.head);
+		})
 			
-			this->removeChild(gobj.start);
-			q[rh.pos].pop();
-			showScoreEffect(Score::MISS);
-		}), NULL);
-		gobj.start->runAction(ac);
+			, NULL);
+		nodeinfo.head->runAction(ac);
 		
 
 		
 	}
+//	log("Anzer  born-%d end", debug_cnt++);
 }
 bool MainGame::checkTouch(int pos, const Vec2 &touchLocation)//这里采取的判定区域是在圆内+长方形内
 {
 	float dis = vGameArea[pos].distance(vBornPoint);
-	Rect checkRect = Rect(vGameArea[pos].x - touchwid, vGameArea[pos].y - touchhei, touchwid*2,touchhei*2);
+	Rect checkRect = Rect(vGameArea[pos].x - this->songconfig.touchwidth, vGameArea[pos].y - this->songconfig.touchheight, this->songconfig.touchwidth * 2, this->songconfig.touchheight * 2);
 	auto point=touchLocation.rotateByAngle(vGameArea[pos], atan((vBornPoint.x - vGameArea[pos].x) / (vBornPoint.y - vGameArea[pos].y)));
-	return (checkRect.containsPoint(point) && touchLocation.distance(vGameArea[pos]) < touchdis);
+	return (checkRect.containsPoint(point) && touchLocation.distance(vGameArea[pos]) < this->songconfig.touchdis);
 	
 }
 void MainGame::onTouchesBegan(const std::vector<Touch*>& touches, Event  *event)
@@ -516,123 +563,89 @@ void MainGame::onTouchesBegan(const std::vector<Touch*>& touches, Event  *event)
 	for (auto touch : touches)
 	{
 		auto location = touch->getLocation();
-		for (int i = 0; i < 9;i++ )
+		for (int i = 0; i < 9; i++)
 		{
-			if (checkTouch(i,location))
+			if (checkTouch(i, location))
 			{
-				if (q[i].empty())break;
-				auto tmp = q[i].front();
-				if (tmp.type&RHYTHMTYPE_LONG)
+				
+				while (queueHead[i] < nodeQueue[i].size() && nodeQueue[i][queueHead[i]].result != Score::NONE)queueHead[i]++;
+				if (queueHead[i] >= nodeQueue[i].size())
 				{
-					auto sppos = tmp.start->getPosition();
-					float dis = vGameArea[i].distance(sppos);
-					if (dis>baddis)break;
-						showPressEffect(i);
-						//长条形被按住，停止动作并设置到头像处
-						table.insert(std::make_pair(touch, i));
-						tmp.start->stopAllActions();
-						tmp.start->setPosition(vGameArea[i]);
-						tmp.start->setScale(1);
-						tmp.node->runAction(RepeatForever::create
-							(Sequence::create(EaseIn::create(FadeOut::create(1), 2), EaseIn::create(FadeIn::create(1), 2), NULL)));
-						//评价判定
-						if (dis<perfectdis)
-						{
-							showScoreEffect(Score::PREJECT);
-						}
-						else if (dis < greatdis)
-						{
-							showScoreEffect(Score::GREAT);
-						}
-						else if (dis <gooddis)
-						{
-							showScoreEffect(Score::GOOD);
-						}
-						else 
-						{
-							showScoreEffect(Score::BAD);
-						}
-					
-					
-					
+					continue;
+				}
+
+				auto tmp = nodeQueue[i][queueHead[i]];
+				auto sppos = tmp.head->getPosition();
+				float dis = vGameArea[i].distance(sppos);
+				if (dis>songconfig.baddis)
+				{
+					continue;
+				}
+				Score score = Score::NONE;
+				if (dis < songconfig.perfectdis)
+				{
+					score = (Score::PREJECT);
+				}
+				else if (dis < songconfig.greatdis)
+				{
+					score = (Score::GREAT);
+				}
+				else if (dis < songconfig.gooddis)
+				{
+					score = (Score::GOOD);
 				}
 				else
 				{
-					auto sppos=tmp.start->getPosition();
-
-					float dis = vGameArea[i].distance(sppos);
-					if (dis>baddis)break;
-						showPressEffect(i);
-						this->removeChild(tmp.start);
-						q[i].pop();
-						if (dis<perfectdis)
-						{
-							showScoreEffect(Score::PREJECT);
-						}
-						else if (dis < greatdis)
-						{
-							showScoreEffect(Score::GREAT);
-						}
-						else if (dis <gooddis)
-						{
-							showScoreEffect(Score::GOOD);
-						}
-						else
-						{
-							showScoreEffect(Score::BAD);
-						}
-					
+					score = (Score::BAD);
 				}
-				
-				break;
+				nodeQueue[i][queueHead[i]].result = score;
+				queueHead[i]++;
+	
+				showPressEffect(i);
+				if (tmp.type&RHYTHMTYPE_LONG)
+				{
+					log("press %d\n", i);
+					
+					//长条形被按住，停止动作并设置到头像处
+					table.insert(std::make_pair(touch, i));
+					tmp.head->stopAllActions();
+					tmp.head->setPosition(vGameArea[i]);
+					tmp.head->setScale(1);
+					tmp.noodle->runAction(RepeatForever::create
+						(Sequence::create(EaseIn::create(FadeOut::create(1), 2), EaseIn::create(FadeIn::create(1), 2), NULL)));
+				}
+				else tmp.head->setVisible(false);
+
+				showScoreEffect(score);
 			}
 		}
 	}
-	
 }
+	
+
 
 void MainGame::update(float dt)
 {
-	if (endGame)//是否要结束游戏
-	{
-		Director::getInstance()->replaceScene(SelectSong::createScene());
-	}
-	if (!songbegin)//播放歌曲
-	{
-#ifdef TestAudio
-		experimental::AudioEngine::play2d(songpath, false, 0.6);
-#else
 
-		CocosDenshion::SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(0.4);
-		CocosDenshion::SimpleAudioEngine::getInstance()->playBackgroundMusic(songpath.c_str(), false);
-		CocosDenshion::SimpleAudioEngine::getInstance()->setBackgroundMusicVolume(0.4);
 
-#endif
-
-		//idAudio = experimental::AudioEngine::play2d(this->songpath,false,0.6);
-	
-		
-		songbegin = true;
-	}
 	curTime += dt;
-	if ((song.duration<= curTime))//歌曲是否已经到达结束时间了
+	if ((song.dDuration <= curTime) && curRhythm >=song.lstRhythm.size())//歌曲是否已经到达结束时间了
 	{
 
 		this->unscheduleUpdate();
-#ifdef TestAudio
-		experimental::AudioEngine::stopAll();
+#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Stop();
 #else
-		CocosDenshion::SimpleAudioEngine::getInstance()->stopAllEffects();
-		CocosDenshion::SimpleAudioEngine::getInstance()->stopBackgroundMusic();
+		experimental::AudioEngine::stopAll(); 
 #endif
 		ResultScene();
 		return;
 	}
-
-	while (curRhythm <song.data.size() && (song.data[curRhythm].beginTime - (song.speed*rate)) <= curTime)
+	double speed = this->song.dSpeed;
+	while (curRhythm <song.lstRhythm.size() && (song.lstRhythm[curRhythm].beginTime - (speed*songconfig.rate)) <= curTime)
 	{
 		
-		born(song.data[curRhythm++]);
+		born(song.lstRhythm[curRhythm++]);
 		
 	}
 	
@@ -647,40 +660,48 @@ void MainGame::onTouchesEnded(const std::vector<Touch*>& touches, Event  *event)
 	for (auto touch : touches)
 	{
 		auto iter = table.find(touch);
+
 		if (iter != table.end())
 		{
-			auto tmp = q[iter->second].front();
-			auto sppos = tmp.goal->getPosition();
-			float dis = vGameArea[iter->second].distance(sppos);
-			showPressEffect(iter->second);
-			if (dis > missdis)
+			Score score;
+
+
+			auto tmp = (nodeQueue[iter->second])[queueHead[iter->second]-1];
+			score = tmp.result_tail;
+			if (score == Score::NONE)
 			{
-				showScoreEffect(Score::MISS);
+				auto sppos = tmp.tail->getPosition();
+				float dis = vGameArea[iter->second].distance(sppos);
+				if (dis<songconfig.perfectdis)
+				{
+					score = (Score::PREJECT);
+				}
+				else if (dis < songconfig.greatdis)
+				{
+					score = (Score::GREAT);
+				}
+				else if (dis <songconfig.gooddis)
+				{
+					score = (Score::GOOD);
+				}
+				else if (dis<songconfig.baddis)
+				{
+					score = (Score::BAD);
+				}
+				else score = Score::MISS;
+				nodeQueue[iter->second][queueHead[iter->second] - 1].result_tail = score;
 			}
-			else
+
+
+			if (nodeQueue[iter->second][queueHead[iter->second] - 1].result_tail != Score::NONE)
 			{
-				if (dis<perfectdis)
-				{
-					showScoreEffect(Score::PREJECT);
-				}
-				else if (dis < greatdis)
-				{
-					showScoreEffect(Score::GREAT);
-				}
-				else if (dis <gooddis)
-				{
-					showScoreEffect(Score::GOOD);
-				}
-				else
-				{
-					showScoreEffect(Score::BAD);
-				}
+				tmp.head->setVisible(false);
+				tmp.tail->setVisible(false);
+				tmp.noodle->setVisible(false);
+				showPressEffect(iter->second);
+				showScoreEffect(nodeQueue[iter->second][queueHead[iter->second] - 1].result_tail);
 			}
 			
-			this->removeChild(tmp.start);
-			this->removeChild(tmp.node);
-			this->removeChild(tmp.goal);
-			q[iter->second].pop();
 			table.erase(iter);
 
 		}
@@ -779,13 +800,13 @@ void  MainGame::ResultScene()
 
 
 
-	auto lbScore = Label::createWithTTF(ttfConfig, "100000000");
+	auto lbScore = Label::createWithTTF(ttfConfig, "4444444");
 	lbScore->setColor(Color3B(255, 102, 153));
 	lbScore->setPosition(Vec2(655, 720 - 332));
 	lbScore->setAdditionalKerning(20);
 	lyResult->addChild(lbScore, 2);
 
-	auto lbHScore = Label::createWithTTF(ttfConfig, "100000000");
+	auto lbHScore = Label::createWithTTF(ttfConfig, "252525252");
 	lbHScore->setColor(Color3B(255, 102, 153));
 	lbHScore->setPosition(Vec2(655, 720 - 376));
 	lbHScore->setAdditionalKerning(20);

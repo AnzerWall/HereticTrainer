@@ -1,12 +1,15 @@
 #include "HelloWorldScene.h"
 #include<math.h>
 #include<sstream>
-
+#include"AndroidAudio.h"
 //#include "extensions/cocos-ext.h"
 USING_NS_CC;
 //≤‚ ‘”√“≥√Ê
 Scene* HelloWorld::createScene()
 {
+
+	
+	//initAudioEngine();
     // 'scene' is an autorelease object
     auto scene = Scene::create();
     
@@ -95,5 +98,7 @@ void HelloWorld::menuCloseCallback(Ref* pSender)
 		#if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
 		exit(0);
 		#endif*/
+//	playEffectPerfect();
+
 
 }
