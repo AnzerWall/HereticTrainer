@@ -101,8 +101,9 @@ public:
 			return NULL; 
 		} 
 	}
-	
-
+	void Init_Spr_Score_cb(); //创造combo和分数评价的spr
+	void Init_TouchLayer();//创建触摸层
+	void Init_Background();//背景图绘制
 	void born(const Rhythm &rh);//c产生圆环
 	//触摸事件
 	void onTouchesBegan(const std::vector<cocos2d::Touch*>& touches, cocos2d::Event  *event);

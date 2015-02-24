@@ -78,18 +78,28 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 	this->song = song;
 	this->songinfo = songinfo;
 	this->songconfig = songfig;
-
+	Init_Background();
+	Init_Spr_Score_cb();
+	Init_TouchLayer();
+	//暂停按钮
+	btStop = ui::Button::create("stopbutton.png");
+	btStop->setPosition(Vec2(1050, 692));
+	btStop->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
+	{
+		if (type == ui::Widget::TouchEventType::ENDED)
+			this->StopSence(); 
+	});
+	addChild(btStop, 0);
+	//开启循环制造旋律
+	this->scheduleUpdate();
+	return true;
+}
+void MainGame::Init_Background()
+{
 	//创建背景
-//	log("&&&&%s", songinfo.sBackgroundPath.c_str());
 	auto spBackGround = Sprite::create(songinfo.sBackgroundPath,Rect(0,0,1080,720));
-	//spBackGround->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y));
 	spBackGround->setPosition(540,360);
 	addChild(spBackGround, 0);
-	//auto spBackGround_top = Sprite::create("bk_top.png");
-	//spBackGround_top->setAnchorPoint(Vec2(0,1));
-	//spBackGround_top->setPosition(0, 720);
-	//addChild(spBackGround_top, 0);
-
 	//创建头像
 	for (int i = 0; i < 9; i++)
 	{
@@ -97,47 +107,6 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 		sptmp->setPosition(vGameArea[i]);
 		addChild(sptmp, 5);
 	}
-	//创建触摸层
-	touchLayer = Layer::create();
-	touchLayer->setAnchorPoint(Vec2::ZERO);
-	touchLayer->setPosition(Vec2::ZERO);
-	touchLayer->setContentSize(Size(1080,720));
-	//touchLayer->setOpacity(0);
-	addChild(touchLayer, 20);
-
-	listener = EventListenerTouchAllAtOnce::create();
-	listener->onTouchesBegan = CC_CALLBACK_2(MainGame::onTouchesBegan, this);
-	listener->onTouchesMoved = CC_CALLBACK_2(MainGame::onTouchesMoved, this);
-	listener->onTouchesEnded = CC_CALLBACK_2(MainGame::onTouchesEnded, this);
-	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, touchLayer);
-
-	
-
-	//评分精灵创建
-	spPerfect = Sprite::create("perfect.png");
-	spGreat = Sprite::create("great.png");
-	spGood = Sprite::create("good.png");
-	spBad = Sprite::create("bad.png");
-	spMiss = Sprite::create("miss.png");
-	spPerfect->setVisible(false);
-	spGreat->setVisible(false);
-	spGood->setVisible(false);
-	spBad->setVisible(false);
-	spMiss->setVisible(false);
-	spPerfect->setPosition(Vec2(540, 360));
-	spGreat->setPosition(Vec2(540, 360));
-	spGood->setPosition(Vec2(540, 360));
-	spBad->setPosition(Vec2(540, 360));
-	spMiss->setPosition(Vec2(540, 360));
-
-	addChild(spPerfect,30);
-	addChild(spGreat, 30);
-	addChild(spGood, 30);
-	addChild(spBad, 30);
-	addChild(spMiss, 30);
-	//showScoreEffect(Score::PREJECT);
-
-
 	//圆环出生点 音符动画
 	auto spRing1 = Sprite::create("ring2.png");
 	auto spRing2 = Sprite::create("ring2.png");
@@ -151,6 +120,7 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 	spRing2->setOpacity(0);
 	spRing3->setOpacity(0);
 	spRing4->setOpacity(0);
+	//波动的圈圈创建完毕
 	auto sqRing1 = RepeatForever::create(Sequence::create(
 		CCCallFuncN::create([=](Ref *sender){((Sprite*)sender)->setScale(0.2); ((Sprite*)sender)->setOpacity(255); }),
 		EaseOut::create(Spawn::create(ScaleTo::create(0.6, 1), FadeOut::create(0.6), NULL), 5),
@@ -174,35 +144,49 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 		EaseOut::create(Spawn::create(ScaleTo::create(0.6, 1), FadeOut::create(0.6), NULL), 5),
 		DelayTime::create(0.8),
 		NULL));
-	spRing1->runAction(sqRing1);
-	spRing2->runAction(sqRing2);
-	spRing3->runAction(sqRing3);
-	spRing4->runAction(sqRing4);
-	addChild(spRing1, 9);
-	addChild(spRing2, 9);
-	addChild(spRing3, 9);
-	addChild(spRing4, 9);
-	auto spOnfuku = Sprite::create("onfuku.png");
-	spOnfuku->setPosition(vBornPoint);
-	spOnfuku->setScale(0.8);
-	auto sqOnfuku = RepeatForever::create(Sequence::create(EaseIn::create(ScaleTo::create(1, 1), 2), EaseIn::create(ScaleTo::create(1, 0.8), 2), NULL));
-	spOnfuku->runAction(sqOnfuku);
-	addChild(spOnfuku, 10);
+		spRing1->runAction(sqRing1);
+		spRing2->runAction(sqRing2);
+		spRing3->runAction(sqRing3);
+		spRing4->runAction(sqRing4);
+		addChild(spRing1, 9);
+		addChild(spRing2, 9);
+		addChild(spRing3, 9);
+		addChild(spRing4, 9);
+		auto spOnfuku = Sprite::create("onfuku.png");	//音乐标志，圈圈从这里出
+		spOnfuku->setPosition(vBornPoint);
+		spOnfuku->setScale(0.8);
+		auto sqOnfuku = RepeatForever::create(Sequence::create(EaseIn::create(ScaleTo::create(1, 1), 2), EaseIn::create(ScaleTo::create(1, 0.8), 2), NULL));
+		spOnfuku->runAction(sqOnfuku);
+		addChild(spOnfuku, 10);
+		//波动的圈圈动作设定完毕，播放动画
+}
+void MainGame::Init_Spr_Score_cb()
+{
+	//评分精灵创建
+	spPerfect = Sprite::create("perfect.png");
+	spGreat = Sprite::create("great.png");
+	spGood = Sprite::create("good.png");
+	spBad = Sprite::create("bad.png");
+	spMiss = Sprite::create("miss.png");
+	spPerfect->setVisible(false);
+	spGreat->setVisible(false);
+	spGood->setVisible(false);
+	spBad->setVisible(false);
+	spMiss->setVisible(false);
+	spPerfect->setPosition(Vec2(540, 360));
+	spGreat->setPosition(Vec2(540, 360));
+	spGood->setPosition(Vec2(540, 360));
+	spBad->setPosition(Vec2(540, 360));
+	spMiss->setPosition(Vec2(540, 360));
 
+	addChild(spPerfect,30);
+	addChild(spGreat, 30);
+	addChild(spGood, 30);
+	addChild(spBad, 30);
+	addChild(spMiss, 30);
 
-	//暂停按钮
-
-	btStop = ui::Button::create("stopbutton.png");
-	btStop->setPosition(Vec2(1050, 692));
-	btStop->addTouchEventListener([=](Ref *pSender, ui::Widget::TouchEventType type)
-	{
-		if (type == ui::Widget::TouchEventType::ENDED)
-			this->StopSence(); 
-	});
-	addChild(btStop, 0);
-
-
-	//combo显示
+	
+		//combo显示
 	lbCombo = Label::create("combo", "Arial", 30);
 	lbCombo->setPosition(Vec2(570,415));
 	lbCombo->setVisible(false);
@@ -211,16 +195,23 @@ bool MainGame::init(const SongInfo &songinfo, const Song &song, const SongConfig
 	lbComboCnt->setPosition(Vec2(490, 415));
 	lbComboCnt->setAlignment(TextHAlignment::RIGHT);
 	addChild(lbComboCnt);
-	lbComboCnt->setVisible(false);
-	
-
-	//开启循环制造旋律
-	this->scheduleUpdate();
-	return true;
+	lbComboCnt->setVisible(false);;
 }
-
-
-
+void MainGame::Init_TouchLayer()
+{
+	//创建触摸层
+	touchLayer = Layer::create();
+	touchLayer->setAnchorPoint(Vec2::ZERO);
+	touchLayer->setPosition(Vec2::ZERO);
+	touchLayer->setContentSize(Size(1080,720));
+	//touchLayer->setOpacity(0);
+	addChild(touchLayer, 20);
+	listener = EventListenerTouchAllAtOnce::create();
+	listener->onTouchesBegan = CC_CALLBACK_2(MainGame::onTouchesBegan, this);
+	listener->onTouchesMoved = CC_CALLBACK_2(MainGame::onTouchesMoved, this);
+	listener->onTouchesEnded = CC_CALLBACK_2(MainGame::onTouchesEnded, this);
+	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, touchLayer);
+}
 void  MainGame::StopSence()
 {
 //	TextureCache::getInstance()->removeUnusedTextures();
@@ -727,11 +718,8 @@ void  MainGame::ResultScene()
 
 	//创建结果场景
 	auto scResult = Scene::create();
-
-
 	auto lyResult = Layer::create();
 	scResult->addChild(lyResult);
-
 	auto spBackGround = Sprite::createWithTexture(renderTexture->getSprite()->getTexture());
 	spBackGround->setPosition(540, 360);
 	spBackGround->setFlippedY(true);
@@ -744,20 +732,14 @@ void  MainGame::ResultScene()
 
 	listener->setSwallowTouches(true);
 
-
 	listener->onTouchBegan = [=](Touch* touch, Event* event)
 	{
-
 		auto target = static_cast<Sprite*>(event->getCurrentTarget());
 		Point locationInNode = target->convertToNodeSpace(touch->getLocation());
 		Size s = target->getContentSize();
 		Rect rect = Rect(0, 0, s.width, s.height);
 		if (rect.containsPoint(locationInNode))
 		{
-		//	_eventDispatcher->removeEventListener(listener);
-		
-		//	_eventDispatcher->removeAllEventListeners();
-
 			Director::getInstance()->replaceScene(SelectSong::createScene());
 			return true;
 		}
@@ -765,8 +747,7 @@ void  MainGame::ResultScene()
 	};
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(listener, spResult);
 	lyResult->addChild(spResult, 1);
-
-
+//写上得分等数据
 	TTFConfig ttfConfig("fonts/arial.ttf", 42, GlyphCollection::DYNAMIC, nullptr, false);
 	auto lbPerfect = Label::createWithTTF(ttfConfig, String::createWithFormat("%d",cntPerfect)->_string);
 	lbPerfect->setColor(Color3B(255, 102, 153));
