@@ -2,14 +2,15 @@
 #include "HelloWorldScene.h"
 #include"MainGame.h"
 #include "SelectSong.h"
-
-
-#define TestAudio
-#ifdef TestAudio
-#include "audio/include/AudioEngine.h"
-#else
+#include"AndroidAudio.h"
+#include"audio\include\AudioEngine.h"
+#include "MusicPlayer.h"
 #include "SimpleAudioEngine.h"
-#endif
+#include "jni.h"
+#include <stdio.h>
+//#include "build\platforms\android-8\arch-arm\usr\include\android\log.h"
+//#define TAG "HereticTrainer_init"
+//#define LOGD(…) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 USING_NS_CC;
 AppDelegate::AppDelegate() {
 
@@ -18,7 +19,22 @@ AppDelegate::AppDelegate() {
 AppDelegate::~AppDelegate() 
 {
 }
-
+void getmyStorage()
+{
+	//Google 不推荐硬编码/sdcard，改用android.os,Environment.getExternalStorageDirectory()获取外部存储目录
+	#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+	JniMethodInfo getPath;
+	jstring mstr;
+	char mstrcpy[2000];
+		if (JniHelper::getStaticMethodInfo(getPath, "org/cocos2dx/cpp/MusicPlay", "getMyStorage", "()Ljava/lang/String;"))
+		{
+			mstr = (jstring)(getPath.env->CallStaticObjectMethod(getPath.classID, getPath.methodID));
+			strcpy(mstrcpy,getPath.env->GetStringUTFChars(mstr, false));
+			CCLOG("ExtStoragePath = %s",mstrcpy);
+			searchPaths.push_back(std::string(mstrcpy));
+		}	
+#endif
+}
 //if you want a different context,just modify the value of glContextAttrs
 //it will takes effect on all platforms
 void AppDelegate::initGLContextAttrs()
@@ -37,32 +53,42 @@ bool AppDelegate::applicationDidFinishLaunching() {
     if(!glview) {
         glview = GLViewImpl::create("HereticTrainer");
         director->setOpenGLView(glview);
-    }
-#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
-	if (FileUtils::getInstance()->isDirectoryExist("/sdcard/heretictrainer/"))FileUtils::getInstance()->addSearchPath("/sdcard/heretictrainer/");
-	if (FileUtils::getInstance()->isDirectoryExist("/mnt/storage/sdcard/heretictrainer/"))FileUtils::getInstance()->addSearchPath("/mnt/storage/sdcard/heretictrainer/");
-	if (FileUtils::getInstance()->isDirectoryExist("/storage/emulated/0/heretictrainer/"))FileUtils::getInstance()->addSearchPath("/storage/emulated/0/heretictrainer/");
-	if (FileUtils::getInstance()->isDirectoryExist("/storage/emulated/1/heretictrainer/"))FileUtils::getInstance()->addSearchPath("/storage/emulated/1/heretictrainer/");
-	if (FileUtils::getInstance()->isDirectoryExist("/storage/extSdCard/heretictrainer/"))FileUtils::getInstance()->addSearchPath("/storage/extSdCard/heretictrainer/");
-	if (FileUtils::getInstance()->isDirectoryExist("/mnt/sdcard/heretictrainer/"))FileUtils::getInstance()->addSearchPath("/mnt/sdcard/heretictrainer/");
+	}
+	std::vector<std::string> searchPaths;
 
-#endif
+	getmyStorage();	//得到外部存放音乐目录
+
 #if (CC_TARGET_PLATFORM ==CC_PLATFORM_WIN32)
-	if (FileUtils::getInstance()->isDirectoryExist("Resources/"))FileUtils::getInstance()->addSearchPath("Resources/");
-	if (FileUtils::getInstance()->isDirectoryExist("../HereticTrainer/"))FileUtils::getInstance()->addSearchPath("../HereticTrainer/");
 
+	searchPaths.push_back("Resources/");
+	searchPaths.push_back("../HereticTrainer/");
 #endif
+	FileUtils::getInstance()->setSearchPaths(searchPaths);
     // turn on display FPS
-
+	initAudioEngine();
     director->setDisplayStats(false);
 	//glview->setFrameSize(1280,720);
 	glview->setDesignResolutionSize(1080, 720, ResolutionPolicy::SHOW_ALL);//分辨率匹配
     // set FPS. the default value is 1.0/60 if you don't call this
     director->setAnimationInterval(1.0 / 60);
-
+	
+	if (!UserDefault::getInstance()->getBoolForKey("ok"))
+	{
+		
+		UserDefault::getInstance()->setBoolForKey("ok", true);
+		UserDefault::getInstance()->setDoubleForKey("rate",1.0);
+		UserDefault::getInstance()->setDoubleForKey("baddis", 144);
+		UserDefault::getInstance()->setDoubleForKey("gooddis", 80);
+		UserDefault::getInstance()->setDoubleForKey("greatdis", 50);
+		UserDefault::getInstance()->setDoubleForKey("perfectdis", 20);
+		UserDefault::getInstance()->setDoubleForKey("touchdis", 142);
+		UserDefault::getInstance()->setDoubleForKey("touchwidth", 80);
+		UserDefault::getInstance()->setDoubleForKey("touchheight",140);
+		UserDefault::getInstance()->flush();
+		
+	}
     // create a scene. it's an autorelease object
-//	auto scene = MainGame::createScene(SongManager::loadjson("sghard.json"), std::string("sghard.mp3"), 1);
-	//auto scene = HelloWorld::createScene();
+
 	auto scene = SelectSong::createScene();
     // run
     director->runWithScene(scene);
@@ -75,24 +101,22 @@ void AppDelegate::applicationDidEnterBackground() {
 	Director::getInstance()->stopAnimation();
 
 	// if you use SimpleAudioEngine, it must be pause
-#ifdef TestAudio
-	experimental::AudioEngine::pauseAll();
-#else
-	CocosDenshion::SimpleAudioEngine::getInstance()->pauseBackgroundMusic();
-	CocosDenshion::SimpleAudioEngine::getInstance()->stopAllEffects();
-#endif
-
+	#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Pause();
+	#else
+		experimental::AudioEngine::pauseAll(); 
+	#endif
 }
 
 // this function will be called when the app is active again
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
-
+	#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+	Resume();
+	#else
+		experimental::AudioEngine::resumeAll(); 
+	#endif
     // if you use SimpleAudioEngine, it must resume here
-#ifdef TestAudio
-	experimental::AudioEngine::resumeAll();
-	
-#else
-	CocosDenshion::SimpleAudioEngine::getInstance()->resumeBackgroundMusic();
-#endif 
+
+
 }

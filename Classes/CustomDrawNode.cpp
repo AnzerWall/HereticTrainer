@@ -14,12 +14,12 @@ bool CustomDrawNode::init()
 void CustomDrawNode::update(float dt)
 {
 	DrawNode::update(dt);
-	double x1 = goal->getPositionX();//根据两圆环确定梯形的4个点
-	double y1 = goal->getPositionY();
-	double x2 = start->getPositionX();
-	double y2 = start->getPositionY();
-	double R1 = goal->getScale() * 62;
-	double R2 = start->getScale() * 62;
+	double x1 = tail->getPositionX();//根据两圆环确定梯形的4个点
+	double y1 = tail->getPositionY();
+	double x2 = head->getPositionX();
+	double y2 = head->getPositionY();
+	double R1 =tail->getScale() * 62;
+	double R2 =head->getScale() * 62;
 	clear();
 	double dis = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2));
 	double Sin = (x1- x2) / dis;

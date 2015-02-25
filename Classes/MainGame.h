@@ -6,24 +6,36 @@
 #include"CustomDrawNode.h"
 #include"DataManager.h"
 #include<unordered_map>
+#include "MusicPlayer.h"
 using cocos2d::Vec2;
-enum class Score{ PREJECT = 1, GREAT,GOOD,BAD,MISS };
+enum class Score{ PREJECT = 1, GREAT,GOOD,BAD,MISS,NONE };
 
 
-struct  GameObject 
+
+struct NodeInfo
 {
-	cocos2d::Sprite* start;
-	cocos2d::Sprite* goal;
-	CustomDrawNode* node;
+	cocos2d::Sprite* head;
+	cocos2d::Sprite* tail;
+	CustomDrawNode* noodle;
 	int type;
+	int index;
+	Score result;
+	Score result_tail;
+	NodeInfo()
+	{	
+		head = NULL;
+		tail=NULL;
+		noodle = NULL;
+		type=0;
+		index=0;
+		result = Score::NONE;
+		result_tail = Score::NONE;
+	}
+	
 };
 class MainGame : public cocos2d::Layer
 {
 public:
-	// there's no 'id' in cpp, so we recommend returning the class instance pointer
-	static cocos2d::Scene* createScene(const Song &song, std::string songpath, double speedrate);
-	virtual bool init();
-	CREATE_FUNC(MainGame);
 	//保存一些对象的指针方便操作
 	cocos2d::EventListenerTouchAllAtOnce* listener;
 	cocos2d::Layer *touchLayer;
@@ -37,40 +49,61 @@ public:
 	//int idAudio;//背景音乐的id
 	cocos2d::ui::Button* btStop;
 
-	int curRhythm = 0;
-	double curTime = 0;
+	int curRhythm;
+	double curTime;
 	//记录
-	int maxCombo = 0;
-	int curCombo = 0;
-	int cntPerfect = 0;
-	int cntGreat = 0;
-	int cntGood = 0;
-	int cntBad = 0;
-	int cntMiss = 0;
+	int maxCombo;
+	int curCombo;
+	int cntPerfect;
+	int cntGreat;
+	int cntGood;
+	int cntBad;
+	int cntMiss;
 
-	std::string songpath;//背景音乐路径
 
-	bool songbegin = false;//是否已经开始播放音乐
-	bool endGame = false;//是否结束游戏
+	
 	Song song;//当前的歌曲数据
-	double rate=1;//速率，未使用
-
-	//判定基准
-	double missdis=160;
-	double perfectdis=16;//15
-	double greatdis=42;//35
-	double gooddis=85;//65
-	double baddis=160;
-	double touchdis =140;
-	double touchwid = 80;//触摸判定矩形的宽
-	double touchhei = 145;//half
+	SongInfo songinfo;
+	SongConfig songconfig;
 
 
-
-	std::queue<GameObject> q[9];//保存每一道最近的圆环
-
+	std::vector<NodeInfo> nodeQueue[9];	//nodequeue即1-9号位上出现的note的信息
+	int queueHead[9];
 	std::unordered_map<cocos2d::Touch*, int > table;//保存某次触摸是属于哪一个道的圆环的
+	MainGame()
+	{
+		curRhythm = 0;
+		curTime = 0;
+		maxCombo = 0;
+		curCombo = 0;
+		cntPerfect = 0;
+		cntGreat = 0;
+		cntGood = 0;
+		cntBad = 0;
+		cntMiss = 0;
+	}
+	// there's no 'id' in cpp, so we recommend returning the class instance pointer
+	static cocos2d::Scene* createScene(const SongInfo &songinfo,const Song &song, const SongConfig &songfig);
+	virtual bool init(const SongInfo& songinfo, const Song &song, const SongConfig &songfig);
 
+	static MainGame* create(const SongInfo &songinfo, const Song &song, const SongConfig &songfig)
+	{  
+		MainGame *pRet = new MainGame(); 
+		if (pRet && pRet->init(songinfo,song,songfig))
+		{ 
+			pRet->autorelease(); 
+			return pRet; 
+		} 
+		else 
+		{ 
+			delete pRet; 
+			pRet = NULL; 
+			return NULL; 
+		} 
+	}
+	void Init_Spr_Score_cb(); //创造combo和分数评价的spr
+	void Init_TouchLayer();//创建触摸层
+	void Init_Background();//背景图绘制
 	void born(const Rhythm &rh);//c产生圆环
 	//触摸事件
 	void onTouchesBegan(const std::vector<cocos2d::Touch*>& touches, cocos2d::Event  *event);
@@ -89,11 +122,7 @@ public:
 	 void  ResultScene();
 	 //测试是否触摸了某一道
 	 bool checkTouch(int pos, const Vec2 &touchLocation);
-	//计算几何，求叉乘，返回值>0表示线段BO在AO的左侧（逆时针方向），<0表示在右侧，0同侧（可能同向也可能反向），未使用
-	inline float cross(Vec2 vO, Vec2 vA, Vec2 vB) 
-	{
-		return (vA.x - vO.x)*(vB.y - vO.y) - (vA.y - vO.y)*(vB.x - vO.x);
-	}
+
 };
 
 #endif 
