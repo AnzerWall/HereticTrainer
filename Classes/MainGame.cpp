@@ -22,12 +22,9 @@ double iRadius = 62;
 Scene* MainGame::createScene(const SongInfo &songinfo, const Song &song, const SongConfig &songfig)
 {
 	// 'scene' is an autorelease object
-
 	auto scene = Scene::create();
-
 	// 'layer' is an autorelease object
 	auto layer = MainGame::create(songinfo, song, songfig);
-
 	// add layer as a child to scene
 	scene->addChild(layer);
 	// return the scene
@@ -35,6 +32,7 @@ Scene* MainGame::createScene(const SongInfo &songinfo, const Song &song, const S
 }
 void MainGame::showPressEffect(int pos)
 {
+	//击打note之后显示的特效
 	auto spRing = Sprite::create("ring.png");
 	spRing->setPosition(vGameArea[pos]);
 	spRing->setScale(0.4);

@@ -25,7 +25,7 @@ LOCAL_SRC_FILES := hellocpp/main.cpp \
 			../../Classes/MainGame.cpp \
 			../../Classes/MusicPlayer.cpp
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../Classes
-
+LOCAL_LDLIBS:=-L$(SYSROOT)/usr/lib -llog
 LOCAL_STATIC_LIBRARIES := cocos2dx_static
 LOCAL_JNI_SHARED_LIBRARIES := libcocos2dcpp
 include $(BUILD_SHARED_LIBRARY)

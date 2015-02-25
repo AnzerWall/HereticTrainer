@@ -67,7 +67,7 @@ public:
 	SongConfig songconfig;
 
 
-	std::vector<NodeInfo> nodeQueue[9];
+	std::vector<NodeInfo> nodeQueue[9];	//nodequeue即1-9号位上出现的note的信息
 	int queueHead[9];
 	std::unordered_map<cocos2d::Touch*, int > table;//保存某次触摸是属于哪一个道的圆环的
 	MainGame()

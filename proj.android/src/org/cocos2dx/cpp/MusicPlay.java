@@ -31,6 +31,10 @@ public class MusicPlay {
 			 }
 			}
 	 }
+	 public static String getMyStorage()
+	 {
+		return Environment.getExternalStorageDirectory() + "/HereticTrainer/";
+	 }
 	 public static boolean Continue_Play()
 	 {
 		 try
@@ -79,8 +83,8 @@ public class MusicPlay {
     	int i = 0;
     	for(; i < exts.length;i++)
     	{
-    		String FullPath = Environment.getExternalStorageDirectory() + "/HereticTrainer/" + Filename + exts[i];
-    		Log.d("Path",FullPath);
+    		String FullPath = getMyStorage() + Filename + exts[i];
+    		Log.d("Path","Trying to find music at " + FullPath);
     		try {
     				mp.setDataSource(FullPath);
     				mp.prepare();

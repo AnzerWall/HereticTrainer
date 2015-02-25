@@ -12,6 +12,7 @@ class  AppDelegate : private cocos2d::Application
 {
 public:
     AppDelegate();
+	void getmyStorage();
     virtual ~AppDelegate();
 
     virtual void initGLContextAttrs();

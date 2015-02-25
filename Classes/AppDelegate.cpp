@@ -4,9 +4,13 @@
 #include "SelectSong.h"
 #include"AndroidAudio.h"
 #include"audio\include\AudioEngine.h"
-
+#include "MusicPlayer.h"
 #include "SimpleAudioEngine.h"
-
+#include "jni.h"
+#include <stdio.h>
+//#include "build\platforms\android-8\arch-arm\usr\include\android\log.h"
+//#define TAG "HereticTrainer_init"
+//#define LOGD(…) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 USING_NS_CC;
 AppDelegate::AppDelegate() {
 
@@ -15,7 +19,22 @@ AppDelegate::AppDelegate() {
 AppDelegate::~AppDelegate() 
 {
 }
-
+void getmyStorage()
+{
+	//Google 不推荐硬编码/sdcard，改用android.os,Environment.getExternalStorageDirectory()获取外部存储目录
+	#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
+	JniMethodInfo getPath;
+	jstring mstr;
+	char mstrcpy[2000];
+		if (JniHelper::getStaticMethodInfo(getPath, "org/cocos2dx/cpp/MusicPlay", "getMyStorage", "()Ljava/lang/String;"))
+		{
+			mstr = (jstring)(getPath.env->CallStaticObjectMethod(getPath.classID, getPath.methodID));
+			strcpy(mstrcpy,getPath.env->GetStringUTFChars(mstr, false));
+			CCLOG("ExtStoragePath = %s",mstrcpy);
+			searchPaths.push_back(std::string(mstrcpy));
+		}	
+#endif
+}
 //if you want a different context,just modify the value of glContextAttrs
 //it will takes effect on all platforms
 void AppDelegate::initGLContextAttrs()
@@ -36,16 +55,9 @@ bool AppDelegate::applicationDidFinishLaunching() {
         director->setOpenGLView(glview);
 	}
 	std::vector<std::string> searchPaths;
-#if (CC_TARGET_PLATFORM ==CC_PLATFORM_ANDROID)
 
-	searchPaths.push_back("/sdcard/heretictrainer/");
-	searchPaths.push_back("/mnt/storage/sdcard/heretictrainer/");
-	searchPaths.push_back("/storage/emulated/0/heretictrainer/");
-	searchPaths.push_back("/storage/emulated/1/heretictrainer/");
-	searchPaths.push_back("/storage/extSdCard/heretictrainer/");
-	searchPaths.push_back("/mnt/sdcard/heretictrainer/");
+	getmyStorage();	//得到外部存放音乐目录
 
-#endif
 #if (CC_TARGET_PLATFORM ==CC_PLATFORM_WIN32)
 
 	searchPaths.push_back("Resources/");
@@ -77,7 +89,6 @@ bool AppDelegate::applicationDidFinishLaunching() {
 	}
     // create a scene. it's an autorelease object
 
-	//auto scene = HelloWorld::createScene();
 	auto scene = SelectSong::createScene();
     // run
     director->runWithScene(scene);
@@ -90,13 +101,21 @@ void AppDelegate::applicationDidEnterBackground() {
 	Director::getInstance()->stopAnimation();
 
 	// if you use SimpleAudioEngine, it must be pause
-	experimental::AudioEngine::pauseAll();
+	#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+		Pause();
+	#else
+		experimental::AudioEngine::pauseAll(); 
+	#endif
 }
 
 // this function will be called when the app is active again
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
-	experimental::AudioEngine::resumeAll();
+	#if(CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+	Resume();
+	#else
+		experimental::AudioEngine::resumeAll(); 
+	#endif
     // if you use SimpleAudioEngine, it must resume here
 
 
